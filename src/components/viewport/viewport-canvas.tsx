@@ -13,6 +13,7 @@ import { Edge3D } from "./edge-3d";
 import { ParticleFlow } from "./particle-flow";
 import { CameraFocus } from "./camera-focus";
 import { Chart3D } from "./chart-3d";
+import { EffectComposer, Bloom } from "@react-three/postprocessing";
 
 function Scene() {
   const nodes = useWorkflowStore((s) => s.nodes);
@@ -153,6 +154,14 @@ export default function ViewportCanvas() {
       style={{ background: "#0f0f13" }}
     >
       <Scene />
+      <EffectComposer>
+        <Bloom
+          intensity={0.4}
+          luminanceThreshold={0.6}
+          luminanceSmoothing={0.9}
+          mipmapBlur
+        />
+      </EffectComposer>
     </Canvas>
   );
 }
