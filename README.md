@@ -1,5 +1,7 @@
 # FlowCraft
 
+> **Demo**: https://flowcraft-jet.vercel.app/
+
 노드 기반 워크플로우를 설계하고, 실행 흐름을 3D 공간에서 실시간으로 시각화하는 풀스택 웹 플랫폼.
 
 ## 개요
