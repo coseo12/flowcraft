@@ -67,6 +67,69 @@ export function handleLogOutput(
   return { label, data: input };
 }
 
+// --- Phase 2 핸들러 ---
+
+/**
+ * Webhook — 외부 요청 수신
+ */
+export function handleWebhook(request: {
+  headers: Record<string, string>;
+  body: unknown;
+  query: Record<string, string>;
+}): { headers: Record<string, string>; body: unknown; query: Record<string, string> } {
+  return request;
+}
+
+/**
+ * Switch — 다중 조건 분기
+ * 값에 따라 매칭되는 케이스 인덱스를 반환
+ */
+export function handleSwitch(
+  value: string,
+  cases: { value: string; label: string }[]
+): { matchedIndex: number; matchedLabel: string } {
+  const index = cases.findIndex((c) => c.value === value);
+  return {
+    matchedIndex: index,
+    matchedLabel: index >= 0 ? cases[index].label : "default",
+  };
+}
+
+/**
+ * DB Query — SQLite 쿼리 실행
+ * db 인스턴스를 외부에서 주입받는다.
+ */
+export function handleDbQuery(
+  query: string,
+  params: unknown[],
+  db?: unknown
+): { rows: unknown[]; changes: number } {
+  // db가 주입되지 않으면 런타임에서 가져오기
+  if (!db) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getDb } = require("@/lib/db");
+    db = getDb();
+  }
+
+  const dbInstance = db as { prepare: (sql: string) => { all: (...args: unknown[]) => unknown[]; run: (...args: unknown[]) => { changes: number } } };
+  const trimmed = query.trim().toUpperCase();
+
+  if (trimmed.startsWith("SELECT")) {
+    const rows = dbInstance.prepare(query).all(...params);
+    return { rows, changes: 0 };
+  }
+
+  const result = dbInstance.prepare(query).run(...params);
+  return { rows: [], changes: result.changes };
+}
+
+/**
+ * Parallel — 입력을 그대로 전달 (분기점 역할)
+ */
+export function handleParallel(input: unknown): unknown {
+  return input;
+}
+
 /**
  * 필드 경로에서 값을 추출 ("input.data.name" → data.name의 값)
  * 경로가 "input."으로 시작하면 제거

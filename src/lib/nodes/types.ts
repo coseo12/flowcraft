@@ -4,7 +4,12 @@ export type FlowNodeType =
   | "apiCall"
   | "script"
   | "condition"
-  | "logOutput";
+  | "logOutput"
+  | "webhook"
+  | "cron"
+  | "parallel"
+  | "switch"
+  | "dbQuery";
 
 // 노드 타입별 색상
 export const NODE_COLORS: Record<FlowNodeType, string> = {
@@ -13,6 +18,11 @@ export const NODE_COLORS: Record<FlowNodeType, string> = {
   script: "#f59e0b",
   condition: "#a855f7",
   logOutput: "#f43f5e",
+  webhook: "#10b981",
+  cron: "#06b6d4",
+  parallel: "#ec4899",
+  switch: "#8b5cf6",
+  dbQuery: "#14b8a6",
 };
 
 // 노드 타입별 카테고리
@@ -22,6 +32,11 @@ export const NODE_CATEGORIES: Record<FlowNodeType, string> = {
   script: "처리",
   condition: "분기",
   logOutput: "출력",
+  webhook: "입력",
+  cron: "입력",
+  parallel: "분기",
+  switch: "분기",
+  dbQuery: "처리",
 };
 
 // 각 노드 타입별 설정 데이터
@@ -55,12 +70,44 @@ export interface LogOutputConfig {
   logLabel: string;
 }
 
+export interface WebhookConfig {
+  nodeType: "webhook";
+  path: string;
+  method: "GET" | "POST";
+}
+
+export interface CronConfig {
+  nodeType: "cron";
+  expression: string;
+}
+
+export interface ParallelConfig {
+  nodeType: "parallel";
+}
+
+export interface SwitchConfig {
+  nodeType: "switch";
+  field: string;
+  cases: string;
+}
+
+export interface DbQueryConfig {
+  nodeType: "dbQuery";
+  query: string;
+  params: string;
+}
+
 export type NodeConfig =
   | HttpTriggerConfig
   | ApiCallConfig
   | ScriptConfig
   | ConditionConfig
-  | LogOutputConfig;
+  | LogOutputConfig
+  | WebhookConfig
+  | CronConfig
+  | ParallelConfig
+  | SwitchConfig
+  | DbQueryConfig;
 
 // 노드 타입별 기본 설정값
 export const DEFAULT_CONFIGS: Record<FlowNodeType, NodeConfig> = {
@@ -86,5 +133,27 @@ export const DEFAULT_CONFIGS: Record<FlowNodeType, NodeConfig> = {
   logOutput: {
     nodeType: "logOutput",
     logLabel: "로그",
+  },
+  webhook: {
+    nodeType: "webhook",
+    path: "/webhook",
+    method: "POST",
+  },
+  cron: {
+    nodeType: "cron",
+    expression: "*/5 * * * *",
+  },
+  parallel: {
+    nodeType: "parallel",
+  },
+  switch: {
+    nodeType: "switch",
+    field: "input.type",
+    cases: '[{"value":"admin","label":"관리자"},{"value":"user","label":"사용자"}]',
+  },
+  dbQuery: {
+    nodeType: "dbQuery",
+    query: "SELECT * FROM workflows LIMIT 10",
+    params: "[]",
   },
 };

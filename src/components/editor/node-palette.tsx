@@ -21,6 +21,16 @@ const NODE_CATEGORIES: NodeCategory[] = [
         label: "HTTP Trigger",
         description: "워크플로우 실행 시작점",
       },
+      {
+        type: "webhook",
+        label: "Webhook",
+        description: "외부 HTTP 요청 수신",
+      },
+      {
+        type: "cron",
+        label: "Cron",
+        description: "스케줄 기반 트리거",
+      },
     ],
   },
   {
@@ -36,6 +46,11 @@ const NODE_CATEGORIES: NodeCategory[] = [
         label: "Script",
         description: "JavaScript 코드 실행",
       },
+      {
+        type: "dbQuery",
+        label: "DB Query",
+        description: "SQLite 쿼리 실행",
+      },
     ],
   },
   {
@@ -45,6 +60,16 @@ const NODE_CATEGORIES: NodeCategory[] = [
         type: "condition",
         label: "조건문",
         description: "If/Else 흐름 분기",
+      },
+      {
+        type: "switch",
+        label: "스위치",
+        description: "다중 조건 분기",
+      },
+      {
+        type: "parallel",
+        label: "병렬",
+        description: "동시 실행 분기",
       },
     ],
   },
