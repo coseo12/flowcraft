@@ -10,6 +10,7 @@ import { useWorkflowStore } from "@/lib/store/workflow-store";
 import { useExecutionStore } from "@/lib/store/execution-store";
 import { useUIStore } from "@/lib/store/ui-store";
 import { saveWorkflow, executeWorkflowApi } from "@/lib/api/workflow-api";
+import { WorkflowListModal } from "./workflow-list-modal";
 
 const MIN_PANEL_WIDTH = 200;
 const MAX_PANEL_WIDTH = 800;
@@ -19,6 +20,7 @@ export function EditorLayout() {
   const [viewportOpen, setViewportOpen] = useState(true);
   const [bottomOpen, setBottomOpen] = useState(true);
   const [viewportWidth, setViewportWidth] = useState(400);
+  const [listModalOpen, setListModalOpen] = useState(false);
   const { id: workflowId, name, nodes, edges, setWorkflow } = useWorkflowStore();
   const { startExecution, updateNodeStatus, addLog, finishExecution } = useExecutionStore();
   const { setBottomTab } = useUIStore();
@@ -110,6 +112,7 @@ export function EditorLayout() {
         onToggleBottom={() => setBottomOpen(!bottomOpen)}
         onSave={handleSave}
         onExecute={handleExecute}
+        onOpenList={() => setListModalOpen(true)}
       />
 
       {/* 메인 영역 */}
@@ -149,6 +152,12 @@ export function EditorLayout() {
 
       {/* 하단 패널 */}
       {bottomOpen && <BottomPanel onClose={() => setBottomOpen(false)} />}
+
+      {/* 워크플로우 목록 모달 */}
+      <WorkflowListModal
+        open={listModalOpen}
+        onClose={() => setListModalOpen(false)}
+      />
     </div>
   );
 }
