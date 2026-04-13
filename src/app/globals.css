@@ -40,3 +40,17 @@ body {
 .react-flow__node {
   font-family: var(--font-sans);
 }
+
+/* 모션 감소 설정 대응 */
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__edge.animated path {
+    animation: none !important;
+  }
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+  .mobile-hide {
+    display: none !important;
+  }
+}

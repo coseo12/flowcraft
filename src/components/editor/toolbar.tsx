@@ -10,6 +10,7 @@ interface ToolbarProps {
   onToggleBottom: () => void;
   onSave?: () => void;
   onExecute?: () => void;
+  onOpenList?: () => void;
 }
 
 export function Toolbar({
@@ -19,6 +20,7 @@ export function Toolbar({
   onToggleBottom,
   onSave,
   onExecute,
+  onOpenList,
 }: ToolbarProps) {
   const { name, setName } = useWorkflowStore();
   const { isRunning } = useExecutionStore();
@@ -60,6 +62,12 @@ export function Toolbar({
           title="3D 뷰포트 토글"
         >
           3D
+        </button>
+        <button
+          onClick={onOpenList}
+          className="rounded px-3 py-1.5 text-xs text-muted hover:text-foreground transition-colors"
+        >
+          목록
         </button>
         <button
           onClick={onSave}

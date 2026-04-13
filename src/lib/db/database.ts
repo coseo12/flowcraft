@@ -38,6 +38,15 @@ export function initDatabase(db: Database.Database): void {
       duration_ms INTEGER,
       FOREIGN KEY (execution_id) REFERENCES executions(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS workflow_versions (
+      id TEXT PRIMARY KEY,
+      workflow_id TEXT NOT NULL,
+      version INTEGER NOT NULL,
+      graph TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+    );
   `);
 }
 
