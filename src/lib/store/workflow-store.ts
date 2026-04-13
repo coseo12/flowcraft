@@ -11,7 +11,7 @@ export interface WorkflowState {
   edges: Edge[];
 
   // 액션
-  setWorkflow: (id: string, name: string, nodes: Node[], edges: Edge[]) => void;
+  setWorkflow: (id: string | null, name: string, nodes: Node[], edges: Edge[]) => void;
   setName: (name: string) => void;
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;

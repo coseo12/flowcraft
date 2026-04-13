@@ -8,7 +8,7 @@ function HttpTriggerNodeInner({ id, data }: NodeProps) {
   return (
     <BaseNode
       id={id}
-      data={data as never}
+      data={data}
       inputs={false}
       outputs={[{ id: "default" }]}
       icon={<span>⚡</span>}

@@ -12,7 +12,7 @@ function ConditionNodeInner({ id, data }: NodeProps) {
   return (
     <BaseNode
       id={id}
-      data={data as never}
+      data={data}
       outputs={[
         { id: "true", label: "true" },
         { id: "false", label: "false" },
