@@ -69,7 +69,7 @@ export function WorkflowListModal({ open, onClose }: WorkflowListModalProps) {
       const text = await file.text();
       try {
         const data = JSON.parse(text);
-        setWorkflow(null as unknown as string, data.name ?? "Imported", data.nodes ?? [], data.edges ?? []);
+        setWorkflow(null, data.name ?? "Imported", data.nodes ?? [], data.edges ?? []);
         resetExecution();
         onClose();
       } catch {

@@ -14,7 +14,7 @@ interface BaseNodeData {
 
 interface BaseNodeProps {
   id: string;
-  data: BaseNodeData;
+  data: Record<string, unknown>;
   // 입출력 핸들 설정
   inputs?: boolean;
   outputs?: { id: string; label?: string; position?: number }[];
@@ -43,7 +43,7 @@ function BaseNodeInner({
   const selectedNodeId = useUIStore((s) => s.selectedNodeId);
   const status = nodeState?.status ?? "idle";
   const isSelected = selectedNodeId === id;
-  const color = NODE_COLORS[data.nodeType];
+  const color = NODE_COLORS[data.nodeType as FlowNodeType];
 
   return (
     <div
@@ -60,7 +60,7 @@ function BaseNodeInner({
           {icon}
         </span>
         <span className="text-xs font-medium text-foreground">
-          {data.label}
+          {data.label as string}
         </span>
         {status === "running" && (
           <span className="ml-auto h-2 w-2 animate-pulse rounded-full bg-amber-400" />

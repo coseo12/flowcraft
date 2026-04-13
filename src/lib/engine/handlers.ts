@@ -18,10 +18,20 @@ export function handleHttpTrigger(config: {
 /**
  * Script — JavaScript 코드 실행 (샌드박스)
  * Function 생성자를 사용하여 eval보다 안전한 실행 환경 제공
+ * 동기 코드의 실행 후 시간 초과를 체크한다.
  */
+const SCRIPT_TIMEOUT_MS = 10_000;
+
 export function handleScript(code: string, input: unknown): unknown {
+  const start = Date.now();
   const fn = new Function("input", code);
-  return fn(input);
+  const result = fn(input);
+
+  if (Date.now() - start > SCRIPT_TIMEOUT_MS) {
+    throw new Error("스크립트 실행 시간이 10초를 초과했습니다");
+  }
+
+  return result;
 }
 
 /**

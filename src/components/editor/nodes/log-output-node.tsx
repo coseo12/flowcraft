@@ -10,7 +10,7 @@ function LogOutputNodeInner({ id, data }: NodeProps) {
   return (
     <BaseNode
       id={id}
-      data={data as never}
+      data={data}
       outputs={[]}
       icon={<span>📋</span>}
     >
