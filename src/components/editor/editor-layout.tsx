@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Toolbar } from "./toolbar";
 import { NodePalette } from "./node-palette";
 import { FlowCanvas } from "./canvas";
@@ -9,8 +9,9 @@ import { ViewportPanel } from "../viewport/viewport-panel";
 import { useWorkflowStore } from "@/lib/store/workflow-store";
 import { useExecutionStore } from "@/lib/store/execution-store";
 import { useUIStore } from "@/lib/store/ui-store";
-import { saveWorkflow, executeWorkflowApi } from "@/lib/api/workflow-api";
+import { saveWorkflow, executeWorkflowApi, executeLocalApi } from "@/lib/api/workflow-api";
 import { WorkflowListModal } from "./workflow-list-modal";
+import { DEMO_NODES, DEMO_EDGES, DEMO_WORKFLOW_NAME } from "@/lib/demo/preset";
 
 const MIN_PANEL_WIDTH = 200;
 const MAX_PANEL_WIDTH = 800;
@@ -21,9 +22,22 @@ export function EditorLayout() {
   const [bottomOpen, setBottomOpen] = useState(true);
   const [viewportWidth, setViewportWidth] = useState(400);
   const [listModalOpen, setListModalOpen] = useState(false);
-  const { id: workflowId, name, nodes, edges, setWorkflow } = useWorkflowStore();
+  const { id: workflowId, name, nodes, edges, setWorkflow, setNodes, setEdges, setName } = useWorkflowStore();
   const { startExecution, updateNodeStatus, addLog, finishExecution } = useExecutionStore();
   const { setBottomTab } = useUIStore();
+  const initialized = useRef(false);
+
+  // 초기 로드 시 데모 워크플로우 적용 (노드가 비어있을 때만)
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
+    if (nodes.length === 0) {
+      setName(DEMO_WORKFLOW_NAME);
+      setNodes(DEMO_NODES);
+      setEdges(DEMO_EDGES);
+    }
+  }, [nodes.length, setName, setNodes, setEdges]);
 
   const handleSave = useCallback(async () => {
     const id = await saveWorkflow(workflowId, name, nodes, edges);
@@ -32,51 +46,55 @@ export function EditorLayout() {
     }
   }, [workflowId, name, nodes, edges, setWorkflow]);
 
-  const handleExecute = useCallback(async () => {
-    // 먼저 저장
-    const id = await saveWorkflow(workflowId, name, nodes, edges);
-    if (!workflowId) {
-      setWorkflow(id, name, nodes, edges);
-    }
+  // SSE 이벤트 처리 공통 핸들러
+  const handleEvent = useCallback(
+    (event: string, data: unknown) => {
+      const d = data as Record<string, unknown>;
+      const nodeId = d.nodeId as string;
+      const timestamp = new Date().toLocaleTimeString();
 
-    // 실행 시작
+      if (event === "node-status" || event === "node-complete" || event === "node-error") {
+        updateNodeStatus(nodeId, {
+          status: d.status as "running" | "success" | "error" | "skipped",
+          output: d.output,
+          error: d.error as string,
+        });
+
+        const node = nodes.find((n) => n.id === nodeId);
+        const nodeName = (node?.data?.label as string) ?? nodeId;
+
+        if (event === "node-status" && d.status === "running") {
+          addLog({ timestamp, nodeId, nodeName, message: "실행 시작", level: "info" });
+        } else if (event === "node-complete") {
+          addLog({ timestamp, nodeId, nodeName, message: "완료", level: "success" });
+        } else if (event === "node-error") {
+          addLog({ timestamp, nodeId, nodeName, message: d.error as string, level: "error" });
+        } else if (d.status === "skipped") {
+          addLog({ timestamp, nodeId, nodeName, message: "건너뜀", level: "warn" });
+        }
+      }
+    },
+    [nodes, updateNodeStatus, addLog]
+  );
+
+  const handleExecute = useCallback(async () => {
+    if (nodes.length === 0) return;
+
     const nodeIds = nodes.map((n) => n.id);
-    startExecution(id, nodeIds);
+    startExecution("local", nodeIds);
     setBottomTab("log");
 
-    executeWorkflowApi(
-      id,
-      (event, data) => {
-        const d = data as Record<string, unknown>;
-        const nodeId = d.nodeId as string;
-        const timestamp = new Date().toLocaleTimeString();
+    // API 저장 + SSE 실행 시도, 실패 시 로컬 실행으로 폴백
+    try {
+      const id = await saveWorkflow(workflowId, name, nodes, edges);
+      if (!workflowId) setWorkflow(id, name, nodes, edges);
 
-        if (event === "node-status" || event === "node-complete" || event === "node-error") {
-          updateNodeStatus(nodeId, {
-            status: d.status as "running" | "success" | "error" | "skipped",
-            output: d.output,
-            error: d.error as string,
-          });
-
-          const node = nodes.find((n) => n.id === nodeId);
-          const nodeName = (node?.data?.label as string) ?? nodeId;
-
-          if (event === "node-status" && d.status === "running") {
-            addLog({ timestamp, nodeId, nodeName, message: "실행 시작", level: "info" });
-          } else if (event === "node-complete") {
-            addLog({ timestamp, nodeId, nodeName, message: "완료", level: "success" });
-          } else if (event === "node-error") {
-            addLog({ timestamp, nodeId, nodeName, message: d.error as string, level: "error" });
-          } else if (d.status === "skipped") {
-            addLog({ timestamp, nodeId, nodeName, message: "건너뜀", level: "warn" });
-          }
-        }
-      },
-      () => {
-        finishExecution();
-      }
-    );
-  }, [workflowId, name, nodes, edges, setWorkflow, startExecution, updateNodeStatus, addLog, finishExecution, setBottomTab]);
+      executeWorkflowApi(id, handleEvent, () => finishExecution());
+    } catch {
+      // 로컬 실행 폴백 (DB 없는 환경)
+      executeLocalApi(nodes, edges, handleEvent, () => finishExecution());
+    }
+  }, [workflowId, name, nodes, edges, setWorkflow, startExecution, handleEvent, finishExecution, setBottomTab]);
 
   // 3D 뷰포트 리사이즈 핸들러
   const handleViewportResize = useCallback(
