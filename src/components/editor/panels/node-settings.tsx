@@ -154,8 +154,171 @@ export function NodeSettings({ node }: NodeSettingsProps) {
         </Field>
       )}
 
-      {/* HTTP Trigger — 설정 없음 */}
-      {nodeType === "httpTrigger" && (
+      {/* Webhook 설정 */}
+      {nodeType === "webhook" && (
+        <>
+          <Field label="경로">
+            <input
+              type="text"
+              value={(node.data.path as string) || "/webhook"}
+              onChange={(e) => updateData("path", e.target.value)}
+              className="w-full rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent font-mono"
+            />
+          </Field>
+          <Field label="Method">
+            <select
+              value={(node.data.method as string) || "POST"}
+              onChange={(e) => updateData("method", e.target.value)}
+              className="w-full rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent"
+            >
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+            </select>
+          </Field>
+        </>
+      )}
+
+      {/* Cron 설정 */}
+      {nodeType === "cron" && (
+        <Field label="Cron 표현식">
+          <input
+            type="text"
+            value={(node.data.expression as string) || "*/5 * * * *"}
+            onChange={(e) => updateData("expression", e.target.value)}
+            placeholder="*/5 * * * *"
+            className="w-full rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent font-mono"
+          />
+        </Field>
+      )}
+
+      {/* Switch 설정 */}
+      {nodeType === "switch" && (
+        <>
+          <Field label="분기 필드">
+            <input
+              type="text"
+              value={(node.data.field as string) || ""}
+              onChange={(e) => updateData("field", e.target.value)}
+              placeholder="input.type"
+              className="w-full rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent font-mono"
+            />
+          </Field>
+          <Field label="케이스 (JSON 배열)">
+            <textarea
+              value={(node.data.cases as string) || "[]"}
+              onChange={(e) => updateData("cases", e.target.value)}
+              rows={3}
+              placeholder='[{"value":"admin","label":"관리자"}]'
+              className="w-full rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent font-mono resize-none"
+            />
+          </Field>
+        </>
+      )}
+
+      {/* DB Query 설정 */}
+      {nodeType === "dbQuery" && (
+        <>
+          <Field label="SQL 쿼리">
+            <textarea
+              value={(node.data.query as string) || ""}
+              onChange={(e) => updateData("query", e.target.value)}
+              rows={4}
+              placeholder="SELECT * FROM table WHERE id = ?"
+              className="w-full rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent font-mono resize-none"
+            />
+          </Field>
+          <Field label="파라미터 (JSON 배열)">
+            <input
+              type="text"
+              value={(node.data.params as string) || "[]"}
+              onChange={(e) => updateData("params", e.target.value)}
+              placeholder="[1, 2]"
+              className="w-full rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent font-mono"
+            />
+          </Field>
+        </>
+      )}
+
+      {/* LLM Prompt 설정 */}
+      {nodeType === "llmPrompt" && (
+        <>
+          <Field label="프롬프트 템플릿">
+            <textarea
+              value={(node.data.prompt as string) || ""}
+              onChange={(e) => updateData("prompt", e.target.value)}
+              rows={4}
+              placeholder="{{input.data}}를 분석해주세요"
+              className="w-full rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent font-mono resize-none"
+            />
+          </Field>
+          <Field label="모델">
+            <select
+              value={(node.data.model as string) || "claude-sonnet-4-20250514"}
+              onChange={(e) => updateData("model", e.target.value)}
+              className="w-full rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent"
+            >
+              <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+              <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
+            </select>
+          </Field>
+          <Field label="Temperature">
+            <input
+              type="number"
+              value={(node.data.temperature as number) ?? 0.7}
+              onChange={(e) => updateData("temperature", Number(e.target.value))}
+              min={0}
+              max={1}
+              step={0.1}
+              className="w-20 rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent"
+            />
+          </Field>
+          <Field label="Max Tokens">
+            <input
+              type="number"
+              value={(node.data.maxTokens as number) || 1000}
+              onChange={(e) => updateData("maxTokens", Number(e.target.value))}
+              min={1}
+              max={4096}
+              className="w-24 rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent"
+            />
+          </Field>
+        </>
+      )}
+
+      {/* 3D 차트 설정 */}
+      {nodeType === "chart3d" && (
+        <>
+          <Field label="차트 타입">
+            <select
+              value={(node.data.chartType as string) || "bar"}
+              onChange={(e) => updateData("chartType", e.target.value)}
+              className="w-full rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent"
+            >
+              <option value="bar">바 차트</option>
+              <option value="pie">파이 차트</option>
+            </select>
+          </Field>
+          <Field label="라벨 필드">
+            <input
+              type="text"
+              value={(node.data.labelField as string) || "label"}
+              onChange={(e) => updateData("labelField", e.target.value)}
+              className="w-full rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent font-mono"
+            />
+          </Field>
+          <Field label="값 필드">
+            <input
+              type="text"
+              value={(node.data.valueField as string) || "value"}
+              onChange={(e) => updateData("valueField", e.target.value)}
+              className="w-full rounded bg-background border border-border px-2 py-1 text-xs text-foreground outline-none focus:border-accent font-mono"
+            />
+          </Field>
+        </>
+      )}
+
+      {/* 설정 없는 노드 */}
+      {(nodeType === "httpTrigger" || nodeType === "parallel") && (
         <div className="text-muted text-[10px]">
           이 노드는 추가 설정이 없습니다.
         </div>

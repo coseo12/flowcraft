@@ -5,6 +5,11 @@ import {
   handleScript,
   handleCondition,
   handleLogOutput,
+  handleWebhook,
+  handleSwitch,
+  handleDbQuery,
+  handleParallel,
+  handleLlmPrompt,
 } from "./handlers";
 import { renderTemplate } from "./template";
 
@@ -42,49 +47,66 @@ export async function executeWorkflow(
   const outputs = new Map<string, unknown>();
   // skipped된 노드 추적
   const skippedNodes = new Set<string>();
+  // 완료된 노드 추적
+  const completed = new Set<string>();
 
-  for (const nodeId of order) {
-    const node = nodeMap.get(nodeId);
-    if (!node) continue;
+  // 레벨별 병렬 실행: 의존성이 충족된 노드들을 동시 실행
+  const remaining = new Set(order);
 
-    // skipped 처리 확인
-    if (skippedNodes.has(nodeId)) {
-      onStatusChange(nodeId, "skipped");
-      continue;
+  while (remaining.size > 0) {
+    // 현재 실행 가능한 노드들 (모든 선행 노드가 완료됨)
+    const ready: string[] = [];
+    for (const nodeId of remaining) {
+      const deps = edges
+        .filter((e) => e.target === nodeId)
+        .map((e) => e.source);
+      if (deps.every((d) => completed.has(d) || skippedNodes.has(d))) {
+        ready.push(nodeId);
+      }
     }
 
-    // 입력 데이터 수집 — 이전 연결된 노드들의 출력을 합침
-    const input = collectInput(nodeId, edges, outputs);
+    if (ready.length === 0) break;
 
-    // 실행 시작
-    onStatusChange(nodeId, "running");
+    // 병렬 실행
+    await Promise.all(
+      ready.map(async (nodeId) => {
+        remaining.delete(nodeId);
 
-    try {
-      const output = await executeNode(node, input, workflowId, edges);
-      outputs.set(nodeId, output);
-      onStatusChange(nodeId, "success", { output });
-
-      // 조건 노드의 분기 처리
-      if (node.data.nodeType === "condition") {
-        const conditionResult = output as boolean;
-        const skippedHandle = conditionResult ? "false" : "true";
-
-        // 해당 핸들의 타겟 노드와 그 하위를 모두 skipped 처리
-        const skippedTargets = getTargetsByHandle(edges, nodeId, skippedHandle);
-        for (const targetId of skippedTargets) {
-          markDescendantsAsSkipped(targetId, edges, skippedNodes, nodeMap);
+        const node = nodeMap.get(nodeId);
+        if (!node) {
+          completed.add(nodeId);
+          return;
         }
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      onStatusChange(nodeId, "error", { error: errorMessage });
 
-      // 실패한 노드의 모든 후속 노드를 skipped 처리
-      const targets = edges.filter((e) => e.source === nodeId).map((e) => e.target);
-      for (const targetId of targets) {
-        markDescendantsAsSkipped(targetId, edges, skippedNodes, nodeMap);
-      }
-    }
+        if (skippedNodes.has(nodeId)) {
+          onStatusChange(nodeId, "skipped");
+          completed.add(nodeId);
+          return;
+        }
+
+        const input = collectInput(nodeId, edges, outputs);
+        onStatusChange(nodeId, "running");
+
+        try {
+          const output = await executeNode(node, input, workflowId, edges);
+          outputs.set(nodeId, output);
+          onStatusChange(nodeId, "success", { output });
+
+          // 조건/스위치 노드의 분기 처리
+          handleBranching(node, output, edges, nodeId, skippedNodes, nodeMap);
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          onStatusChange(nodeId, "error", { error: errorMessage });
+
+          const targets = edges.filter((e) => e.source === nodeId).map((e) => e.target);
+          for (const targetId of targets) {
+            markDescendantsAsSkipped(targetId, edges, skippedNodes, nodeMap);
+          }
+        }
+
+        completed.add(nodeId);
+      })
+    );
   }
 }
 
@@ -162,6 +184,96 @@ async function executeNode(
     case "logOutput":
       return handleLogOutput((data.logLabel as string) || "로그", input);
 
+    case "webhook":
+      return handleWebhook({
+        headers: {},
+        body: input,
+        query: {},
+      });
+
+    case "cron":
+      return {
+        scheduledAt: new Date().toISOString(),
+        expression: (data.expression as string) || "*/5 * * * *",
+      };
+
+    case "parallel":
+      return handleParallel(input);
+
+    case "switch": {
+      const field = (data.field as string) || "";
+      const casesStr = (data.cases as string) || "[]";
+      let cases: { value: string; label: string }[] = [];
+      try {
+        cases = JSON.parse(casesStr);
+      } catch {
+        // 파싱 실패 시 빈 배열
+      }
+      const fieldPath = field.startsWith("input.") ? field.slice(6) : field;
+      const keys = fieldPath.split(".");
+      let val: unknown = input;
+      for (const k of keys) {
+        if (val && typeof val === "object") {
+          val = (val as Record<string, unknown>)[k];
+        } else {
+          val = undefined;
+          break;
+        }
+      }
+      return handleSwitch(String(val ?? ""), cases);
+    }
+
+    case "dbQuery": {
+      const query = renderTemplate((data.query as string) || "", input);
+      let params: unknown[] = [];
+      try {
+        params = JSON.parse((data.params as string) || "[]");
+      } catch {
+        // 파싱 실패
+      }
+      return handleDbQuery(query, params);
+    }
+
+    case "chart3d": {
+      const chartType = (data.chartType as string) || "bar";
+      const labelField = (data.labelField as string) || "label";
+      const valueField = (data.valueField as string) || "value";
+
+      // 입력이 배열이면 그대로, 아니면 배열 필드 탐색
+      let items: unknown[] = [];
+      if (Array.isArray(input)) {
+        items = input;
+      } else if (input && typeof input === "object") {
+        // 첫 번째 배열 필드를 자동 감지
+        for (const val of Object.values(input as Record<string, unknown>)) {
+          if (Array.isArray(val)) {
+            items = val;
+            break;
+          }
+        }
+      }
+
+      return {
+        chartType,
+        items: items.map((item) => ({
+          label: (item as Record<string, unknown>)[labelField] ?? "",
+          value: Number((item as Record<string, unknown>)[valueField] ?? 0),
+        })),
+      };
+    }
+
+    case "llmPrompt":
+      return handleLlmPrompt(
+        {
+          prompt: (data.prompt as string) || "",
+          model: (data.model as string) || "claude-sonnet-4-20250514",
+          temperature: (data.temperature as number) ?? 0.7,
+          maxTokens: (data.maxTokens as number) || 1000,
+          apiKey: (data.apiKey as string) || "",
+        },
+        input
+      );
+
     default:
       throw new Error(`알 수 없는 노드 타입: ${nodeType}`);
   }
@@ -191,6 +303,40 @@ function collectInput(
     }
   }
   return merged;
+}
+
+/**
+ * 조건/스위치 노드의 분기 처리
+ */
+function handleBranching(
+  node: Node,
+  output: unknown,
+  edges: Edge[],
+  nodeId: string,
+  skippedNodes: Set<string>,
+  nodeMap: Map<string, Node>
+): void {
+  const nodeType = node.data.nodeType as string;
+
+  if (nodeType === "condition") {
+    const conditionResult = output as boolean;
+    const skippedHandle = conditionResult ? "false" : "true";
+    const skippedTargets = getTargetsByHandle(edges, nodeId, skippedHandle);
+    for (const targetId of skippedTargets) {
+      markDescendantsAsSkipped(targetId, edges, skippedNodes, nodeMap);
+    }
+  }
+
+  if (nodeType === "switch") {
+    const result = output as { matchedIndex: number };
+    const outEdges = edges.filter((e) => e.source === nodeId);
+    for (const e of outEdges) {
+      const handleIndex = e.sourceHandle === "default" ? -1 : Number(e.sourceHandle);
+      if (handleIndex !== result.matchedIndex && !(result.matchedIndex === -1 && e.sourceHandle === "default")) {
+        markDescendantsAsSkipped(e.target, edges, skippedNodes, nodeMap);
+      }
+    }
+  }
 }
 
 /**
