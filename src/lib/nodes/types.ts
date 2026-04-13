@@ -9,7 +9,8 @@ export type FlowNodeType =
   | "cron"
   | "parallel"
   | "switch"
-  | "dbQuery";
+  | "dbQuery"
+  | "llmPrompt";
 
 // 노드 타입별 색상
 export const NODE_COLORS: Record<FlowNodeType, string> = {
@@ -23,6 +24,7 @@ export const NODE_COLORS: Record<FlowNodeType, string> = {
   parallel: "#ec4899",
   switch: "#8b5cf6",
   dbQuery: "#14b8a6",
+  llmPrompt: "#f97316",
 };
 
 // 노드 타입별 카테고리
@@ -37,6 +39,7 @@ export const NODE_CATEGORIES: Record<FlowNodeType, string> = {
   parallel: "분기",
   switch: "분기",
   dbQuery: "처리",
+  llmPrompt: "AI",
 };
 
 // 각 노드 타입별 설정 데이터
@@ -97,6 +100,14 @@ export interface DbQueryConfig {
   params: string;
 }
 
+export interface LlmPromptConfig {
+  nodeType: "llmPrompt";
+  prompt: string;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+}
+
 export type NodeConfig =
   | HttpTriggerConfig
   | ApiCallConfig
@@ -107,7 +118,8 @@ export type NodeConfig =
   | CronConfig
   | ParallelConfig
   | SwitchConfig
-  | DbQueryConfig;
+  | DbQueryConfig
+  | LlmPromptConfig;
 
 // 노드 타입별 기본 설정값
 export const DEFAULT_CONFIGS: Record<FlowNodeType, NodeConfig> = {
@@ -155,5 +167,12 @@ export const DEFAULT_CONFIGS: Record<FlowNodeType, NodeConfig> = {
     nodeType: "dbQuery",
     query: "SELECT * FROM workflows LIMIT 10",
     params: "[]",
+  },
+  llmPrompt: {
+    nodeType: "llmPrompt",
+    prompt: "다음 데이터를 분석해주세요:\n{{input.data}}",
+    model: "claude-sonnet-4-20250514",
+    temperature: 0.7,
+    maxTokens: 1000,
   },
 };

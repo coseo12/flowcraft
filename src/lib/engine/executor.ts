@@ -9,6 +9,7 @@ import {
   handleSwitch,
   handleDbQuery,
   handleParallel,
+  handleLlmPrompt,
 } from "./handlers";
 import { renderTemplate } from "./template";
 
@@ -232,6 +233,18 @@ async function executeNode(
       }
       return handleDbQuery(query, params);
     }
+
+    case "llmPrompt":
+      return handleLlmPrompt(
+        {
+          prompt: (data.prompt as string) || "",
+          model: (data.model as string) || "claude-sonnet-4-20250514",
+          temperature: (data.temperature as number) ?? 0.7,
+          maxTokens: (data.maxTokens as number) || 1000,
+          apiKey: (data.apiKey as string) || "",
+        },
+        input
+      );
 
     default:
       throw new Error(`알 수 없는 노드 타입: ${nodeType}`);

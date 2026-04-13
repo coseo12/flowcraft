@@ -131,6 +131,58 @@ export function handleParallel(input: unknown): unknown {
 }
 
 /**
+ * LLM Prompt — AI 모델 호출
+ */
+export interface LlmConfig {
+  prompt: string;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  apiKey: string;
+}
+
+export async function handleLlmPrompt(
+  config: LlmConfig,
+  input: unknown
+): Promise<{ text: string; usage: { input_tokens: number; output_tokens: number } }> {
+  if (!config.apiKey) {
+    throw new Error("API 키가 설정되지 않았습니다. 설정 화면에서 API 키를 입력해주세요.");
+  }
+
+  // 프롬프트 템플릿에 input 데이터 삽입
+  const { renderTemplate } = await import("./template");
+  const renderedPrompt = renderTemplate(config.prompt, input);
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": config.apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: config.model,
+      max_tokens: config.maxTokens,
+      temperature: config.temperature,
+      messages: [{ role: "user", content: renderedPrompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    const message = (error as Record<string, Record<string, string>>)?.error?.message ?? `API 호출 실패 (${response.status})`;
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+  const content = (data as { content: { type: string; text: string }[] }).content;
+  const text = content.find((c: { type: string }) => c.type === "text")?.text ?? "";
+  const usage = (data as { usage: { input_tokens: number; output_tokens: number } }).usage;
+
+  return { text, usage };
+}
+
+/**
  * 필드 경로에서 값을 추출 ("input.data.name" → data.name의 값)
  * 경로가 "input."으로 시작하면 제거
  */

@@ -27,6 +27,7 @@ const GEOMETRY_MAP: Record<FlowNodeType, "box" | "sphere" | "octahedron" | "cone
   parallel: "octahedron",
   switch: "octahedron",
   dbQuery: "cylinder",
+  llmPrompt: "sphere",
 };
 
 // 상태별 emissive 강도

@@ -74,6 +74,16 @@ const NODE_CATEGORIES: NodeCategory[] = [
     ],
   },
   {
+    name: "AI",
+    nodes: [
+      {
+        type: "llmPrompt",
+        label: "LLM Prompt",
+        description: "AI 모델 호출",
+      },
+    ],
+  },
+  {
     name: "출력",
     nodes: [
       {
