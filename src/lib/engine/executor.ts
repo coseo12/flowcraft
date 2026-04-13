@@ -234,6 +234,34 @@ async function executeNode(
       return handleDbQuery(query, params);
     }
 
+    case "chart3d": {
+      const chartType = (data.chartType as string) || "bar";
+      const labelField = (data.labelField as string) || "label";
+      const valueField = (data.valueField as string) || "value";
+
+      // 입력이 배열이면 그대로, 아니면 배열 필드 탐색
+      let items: unknown[] = [];
+      if (Array.isArray(input)) {
+        items = input;
+      } else if (input && typeof input === "object") {
+        // 첫 번째 배열 필드를 자동 감지
+        for (const val of Object.values(input as Record<string, unknown>)) {
+          if (Array.isArray(val)) {
+            items = val;
+            break;
+          }
+        }
+      }
+
+      return {
+        chartType,
+        items: items.map((item) => ({
+          label: (item as Record<string, unknown>)[labelField] ?? "",
+          value: Number((item as Record<string, unknown>)[valueField] ?? 0),
+        })),
+      };
+    }
+
     case "llmPrompt":
       return handleLlmPrompt(
         {

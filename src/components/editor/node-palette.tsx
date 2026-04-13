@@ -84,6 +84,16 @@ const NODE_CATEGORIES: NodeCategory[] = [
     ],
   },
   {
+    name: "시각화",
+    nodes: [
+      {
+        type: "chart3d",
+        label: "3D 차트",
+        description: "데이터를 3D 차트로 시각화",
+      },
+    ],
+  },
+  {
     name: "출력",
     nodes: [
       {

@@ -10,7 +10,8 @@ export type FlowNodeType =
   | "parallel"
   | "switch"
   | "dbQuery"
-  | "llmPrompt";
+  | "llmPrompt"
+  | "chart3d";
 
 // 노드 타입별 색상
 export const NODE_COLORS: Record<FlowNodeType, string> = {
@@ -25,6 +26,7 @@ export const NODE_COLORS: Record<FlowNodeType, string> = {
   switch: "#8b5cf6",
   dbQuery: "#14b8a6",
   llmPrompt: "#f97316",
+  chart3d: "#06b6d4",
 };
 
 // 노드 타입별 카테고리
@@ -40,6 +42,7 @@ export const NODE_CATEGORIES: Record<FlowNodeType, string> = {
   switch: "분기",
   dbQuery: "처리",
   llmPrompt: "AI",
+  chart3d: "시각화",
 };
 
 // 각 노드 타입별 설정 데이터
@@ -108,6 +111,13 @@ export interface LlmPromptConfig {
   maxTokens: number;
 }
 
+export interface Chart3dConfig {
+  nodeType: "chart3d";
+  chartType: "bar" | "pie";
+  labelField: string;
+  valueField: string;
+}
+
 export type NodeConfig =
   | HttpTriggerConfig
   | ApiCallConfig
@@ -119,7 +129,8 @@ export type NodeConfig =
   | ParallelConfig
   | SwitchConfig
   | DbQueryConfig
-  | LlmPromptConfig;
+  | LlmPromptConfig
+  | Chart3dConfig;
 
 // 노드 타입별 기본 설정값
 export const DEFAULT_CONFIGS: Record<FlowNodeType, NodeConfig> = {
@@ -174,5 +185,11 @@ export const DEFAULT_CONFIGS: Record<FlowNodeType, NodeConfig> = {
     model: "claude-sonnet-4-20250514",
     temperature: 0.7,
     maxTokens: 1000,
+  },
+  chart3d: {
+    nodeType: "chart3d",
+    chartType: "bar",
+    labelField: "label",
+    valueField: "value",
   },
 };
