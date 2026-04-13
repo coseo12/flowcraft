@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
+import * as THREE from "three";
 import { type Mesh, Vector3 } from "three";
 import { NODE_COLORS, type FlowNodeType } from "@/lib/nodes/types";
 import { useExecutionStore, type NodeStatus } from "@/lib/store/execution-store";
@@ -63,21 +64,25 @@ export function Node3D({ id, label, nodeType, position }: Node3DProps) {
   const emissiveIntensity = STATUS_EMISSIVE[status];
   const emissiveColor = STATUS_EMISSIVE_COLOR[status] ?? color;
 
-  // running 상태일 때 펄스 애니메이션
   useFrame((_, delta) => {
     if (!meshRef.current) return;
+    const mat = meshRef.current.material as THREE.MeshStandardMaterial;
 
     if (status === "running") {
       meshRef.current.rotation.y += delta * 2;
-      const scale = 1 + Math.sin(Date.now() * 0.005) * 0.1;
-      meshRef.current.scale.setScalar(scale);
-    } else {
-      // 선택 시 살짝 확대
+      const pulse = Math.sin(Date.now() * 0.005) * 0.5 + 0.5;
+      meshRef.current.scale.setScalar(1 + pulse * 0.15);
+      // emissive 강도 펄스
+      mat.emissiveIntensity = 0.4 + pulse * 0.6;
+    } else if (status === "success") {
+      // 성공 시 부드럽게 감쇠
+      mat.emissiveIntensity += (emissiveIntensity - mat.emissiveIntensity) * delta * 3;
       const targetScale = isSelected ? 1.15 : 1;
-      meshRef.current.scale.lerp(
-        new Vector3(targetScale, targetScale, targetScale),
-        delta * 5
-      );
+      meshRef.current.scale.lerp(new Vector3(targetScale, targetScale, targetScale), delta * 5);
+    } else {
+      mat.emissiveIntensity += (emissiveIntensity - mat.emissiveIntensity) * delta * 3;
+      const targetScale = isSelected ? 1.15 : 1;
+      meshRef.current.scale.lerp(new Vector3(targetScale, targetScale, targetScale), delta * 5);
     }
   });
 
